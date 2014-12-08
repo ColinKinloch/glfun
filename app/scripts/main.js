@@ -7,34 +7,123 @@ require.config({
     'gl-matrix': '../bower_components/gl-matrix/dist/gl-matrix',
     'jquery': '../bower_components/jquery/dist/jquery',
     'bootstrap': '../bower_components/bootstrap-sass-official/vendor/assets/javascripts/bootstrap',
-    'text': '../bower_components/requirejs-text/text'
+    'text': '../bower_components/requirejs-text/text',
+    'THREE': '../bower_components/threejs/build/three'
   },
   shim: {
-    bootstrap: ['jquery']
+    bootstrap: ['jquery'],
+    THREE: {
+      exports: 'THREE'
+    }
   }
 });
-require([ 'jquery', 'gl-matrix', 'Entity', 'text!shader.glslf', 'text!shader.glslv' ],
-function(   $       ,  glm       ,  Entity ,  fragshad          ,  vertshad           ){
+require([ 'jquery', 'THREE', 'gl-matrix', 'Shape', 'text!shader.glslf', 'text!shader.glslv' ],
+function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertshad           )
+{
   var canvas = $('#main');
+  var scene = new THREE.Scene();
+  
+  var renderer = new THREE.WebGLRenderer({canvas:canvas[0], antialias: false});
+  //renderer.setSize( window.innerWidth, window.innerHeight );
+  //document.body.appendChild( renderer.domElement );
+  var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+  
+  var light = new THREE.AmbientLight( 0x0f0 ); // soft white light
+  scene.add( light );
+  
+  var light = new THREE.PointLight( 0xff0000, 1, 100 );
+  light.position.set( 25, 50, 50 );
+  scene.add( light );
+  
+  var geometry = new THREE.BoxGeometry( 5, 5, 5 );
+  var geometry = new THREE.SphereGeometry( 5, 20, 10 );
+  var geometry2 = new THREE.BoxGeometry( 2, 2, 2 );
+  
+  /*var Shape = function (s,c)
+  {
+    for(var d in s)
+     s[d] = s[d]/2;
+    var verts = new THREE.Geometry();
+    for(var v=0; v<8; ++v)
+    {
+      var vert = [];
+      var flump='';
+      for(d in s)
+      {
+        if((v>>d) & 1)
+        {
+          vert.push(c[d]+s[d]/2);
+          flump+='1';
+        }
+        else
+        {
+          vert.push(c[d]-s[d]/2);
+          flump+='0';
+        }
+      }
+      //console.log(flump);
+       verts.vertices.push(new THREE.Vector3(vert[0], vert[1], vert[2]));
+    }
+    return verts;
+  };*/
+  /*var shape = new THREE.Shape();
+  shape.moveTo( 0,0 );
+  shape.lineTo( 0, 1 );
+  shape.lineTo( 3, 2 );
+  shape.lineTo( 5, 0 );
+  shape.lineTo( 0, 2 );
+  var geometry = new THREE.ShapeGeometry(shape);*/
+  //var geometry = new Shape(3,3);
+  //geometry.faces.push(new THREE.Face3(0,1,2,3));
+  
+  var material2 = new THREE.MeshPhongMaterial( {
+    ambient: 0xaaa,
+    color: 0xdddddd,
+    specular: 0x009900,
+    shininess: 30,
+    shading: THREE.FlatShading
+  } );
+  var material = new THREE.ShaderMaterial({
+    fragmentShader: fragshad,
+    vertexShader: vertshad,
+    wireframe: false,
+    lights: true
+    //fog: true
+  });
+  
+  
+  
+  var cube = new THREE.Mesh( geometry, material );
+  var cube2 = new THREE.Mesh( geometry2, material2 );
+  scene.add( cube );
+  scene.add( cube2 );
+  cube2.position.z =-2.5;
+  cube2.rotation.z =-2;
+  cube2.rotation.y =-2;
+
+  camera.position.z = 10;
+  
+  var width, height;
   var resize = function(e)
   {
     var w = e.target.innerWidth;
     var h = e.target.innerHeight;
     var r = w/h;
-    canvas.attr('width', w+'px');
-    canvas.attr('height', h+'px');
-    gl.viewport(0, 0, w, h);
-    var pMatrix = glm.mat4.perspective(glm.mat4.create(),50, r, 0.1, 3000);
-    var pMatrix = glm.mat4.ortho(glm.mat4.create(), -w/2,w/2,-h/2,h/2,0.1,3000);
-    //pMatrix = math.multiply(glm.scale(0.5,1,0.5),pMatrix);
-    var pUniform = gl.getUniformLocation(shaderProgram, "projection");
-    gl.uniformMatrix4fv(pUniform, false, new Float32Array(pMatrix));
-    
-    var vMatrix = glm.mat4.create();
-    var vUniform = gl.getUniformLocation(shaderProgram, "view");
-    gl.uniformMatrix4fv(vUniform, false, new Float32Array(vMatrix));
+    renderer.setSize( w, h );
+    camera.aspect = r;
+    camera.updateProjectionMatrix();
+    width = w;
+    height = h;
   };
   $(window).resize(resize);
+  var mouse = new THREE.Vector2(0,0);
+  var drag = function(e)
+  {
+    mouse.x = e.pageX;
+    mouse.y = e.pageY;
+  };
+  canvas.mousemove(drag);
+  /*
   var glprops = {antialias: false};
   var gl = canvas[0].getContext('experimental-webgl2', glprops) || canvas[0].getContext('webgl', glprops) || canvas[0].getContext('experimental-webgl', glprops);
   gl.clearColor(0.0,0.0,0.0,1.0);
@@ -77,37 +166,10 @@ function(   $       ,  glm       ,  Entity ,  fragshad          ,  vertshad     
   var squareVerticesBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
   
-  var Shape = function (s,c)
-  {
-    for(var d in s)
-     s[d] = s[d]/2;
-    var verts = new Array();
-    for(var v=0; v<8; ++v)
-    {
-      var vert = [];
-      var flump='';
-      for(d in s)
-      {
-        if((v>>d) & 1)
-        {
-          vert.push(c[d]+s[d]/2);
-          flump+='1';
-        }
-        else
-        {
-          vert.push(c[d]-s[d]/2);
-          flump+='0';
-        }
-      }
-      //console.log(flump);
-      for(var i in vert)
-       verts.push(vert[i]);
-    }
-    return verts;
-  };
+  
   
   var vertices = Shape([500,500,500], [0,0,0]);
-  //var ent = new Entity(gl, vertices);
+  //var ent = new Entity(gl, vertices, shaderProgram);
   //ent.pos.x += 100;
   
   //gl.bufferData(gl.ARRAY_BUFFER, math.flatten(vertices).toArray(), gl.STATIC_DRAW);
@@ -117,13 +179,18 @@ function(   $       ,  glm       ,  Entity ,  fragshad          ,  vertshad     
   gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
   
   gl.lineWidth(window.devicePixelRatio || 1);
-  
+  */
   $(window).resize();
   var t = window.performance.now();
   var time = window.performance.now();
   var loop = function(t, frame)
   {
-    
+    camera.position.x = (mouse.x-width/2)*0.05;
+    camera.position.y = (mouse.y-height/2)*0.05;
+    camera.lookAt(new THREE.Vector3(0,0,0));
+    cube.rotation.y = t*0.0005;
+    cube.rotation.x = t*0.0007;
+    cube.rotation.x = t*0.0011;
   };
   var main = function()
   {
@@ -135,21 +202,8 @@ function(   $       ,  glm       ,  Entity ,  fragshad          ,  vertshad     
   };
   var draw = function()
   {
-    var mMatrix = glm.mat4.create();
-    //mMatrix = glm.mat4.rotateY(glm.mat4.create(), mMatrix, t*0.0007);
-    mMatrix = glm.mat4.translate(glm.mat4.create(), mMatrix, [0,0,2+Math.cos(t*0.005)*0]);
-    mMatrix = glm.mat4.rotateY(glm.mat4.create(), mMatrix, t*0.0005);
-    var mUniform = gl.getUniformLocation(shaderProgram, "model");
-    gl.uniformMatrix4fv(mUniform, false, new Float32Array(mMatrix));
-    
-    var vMatrix = glm.mat4.create();
-    vMatrix = glm.mat4.translate(glm.mat4.create(),vMatrix,[0,0,-2000.0]);
-    var vUniform = gl.getUniformLocation(shaderProgram, "view");
-    gl.uniformMatrix4fv(vUniform, false, new Float32Array(vMatrix));
-    
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.LINE_STRIP, 0, vertices.length/3);
     window.requestAnimationFrame(draw);
+    renderer.render(scene, camera);
   };
   draw();
   setInterval(main, 0);
