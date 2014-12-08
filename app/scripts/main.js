@@ -22,23 +22,23 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
 {
   var canvas = $('#main');
   var scene = new THREE.Scene();
-  
+
   var renderer = new THREE.WebGLRenderer({canvas:canvas[0], antialias: false});
   //renderer.setSize( window.innerWidth, window.innerHeight );
   //document.body.appendChild( renderer.domElement );
   var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-  
+
   var light = new THREE.AmbientLight( 0x0f0 ); // soft white light
   scene.add( light );
-  
+
   var light = new THREE.PointLight( 0xff0000, 1, 100 );
   light.position.set( 25, 50, 50 );
   scene.add( light );
-  
+
   var geometry = new THREE.BoxGeometry( 5, 5, 5 );
   var geometry = new THREE.SphereGeometry( 5, 20, 10 );
   var geometry2 = new THREE.BoxGeometry( 2, 2, 2 );
-  
+
   /*var Shape = function (s,c)
   {
     for(var d in s)
@@ -75,7 +75,7 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
   var geometry = new THREE.ShapeGeometry(shape);*/
   //var geometry = new Shape(3,3);
   //geometry.faces.push(new THREE.Face3(0,1,2,3));
-  
+
   var material2 = new THREE.MeshPhongMaterial( {
     ambient: 0xaaa,
     color: 0xdddddd,
@@ -86,23 +86,24 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
   var material = new THREE.ShaderMaterial({
     fragmentShader: fragshad,
     vertexShader: vertshad,
-    wireframe: false,
-    lights: true
+    wireframe: true,
+    lights: false
     //fog: true
   });
-  
-  
-  
+
+
+
   var cube = new THREE.Mesh( geometry, material );
   var cube2 = new THREE.Mesh( geometry2, material2 );
   scene.add( cube );
   scene.add( cube2 );
-  cube2.position.z =-2.5;
-  cube2.rotation.z =-2;
-  cube2.rotation.y =-2;
+  //cube2.position.z =-2.5;
+  cube2.rotation.z = 2;
+  cube2.rotation.y = 2;
+  cube2.rotation.x = 1;
 
   camera.position.z = 10;
-  
+
   var width, height;
   var resize = function(e)
   {
@@ -123,6 +124,14 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
     mouse.y = e.pageY;
   };
   canvas.mousemove(drag);
+  var dScroll = 0;
+  var scroll = function(e)
+  {
+    dScroll += e.originalEvent.wheelDeltaY;
+    e.stopPropagation();
+    e.preventDefault();
+  };
+  canvas.bind('mousewheel', scroll);
   /*
   var glprops = {antialias: false};
   var gl = canvas[0].getContext('experimental-webgl2', glprops) || canvas[0].getContext('webgl', glprops) || canvas[0].getContext('experimental-webgl', glprops);
@@ -131,53 +140,53 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
   gl.depthFunc(gl.LEQUAL);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.viewport(0, 0, canvas.width(), canvas.height());
-  
+
   var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
   var vertexShader = gl.createShader(gl.VERTEX_SHADER);
   gl.shaderSource(fragmentShader, fragshad);
   gl.shaderSource(vertexShader, vertshad);
   gl.compileShader(fragmentShader);
-  if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {  
-      console.error("An error occurred compiling the shaders: ", gl.getShaderInfoLog(fragmentShader));  
-      return null;  
+  if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+      console.error("An error occurred compiling the shaders: ", gl.getShaderInfoLog(fragmentShader));
+      return null;
   }
   gl.compileShader(vertexShader);
-  if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {  
-      console.error("An error occurred compiling the shaders: ", gl.getShaderInfoLog(vertexShader));  
-      return null;  
+  if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+      console.error("An error occurred compiling the shaders: ", gl.getShaderInfoLog(vertexShader));
+      return null;
   }
-  
-  
+
+
   var shaderProgram = gl.createProgram();
   gl.attachShader(shaderProgram, fragmentShader);
   gl.attachShader(shaderProgram, vertexShader);
   gl.linkProgram(shaderProgram);
-  
+
   if(!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
   {
     console.error('shader program not linked.');
   }
-  
+
   gl.useProgram(shaderProgram);
-  
+
   var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
   gl.enableVertexAttribArray(vertexPositionAttribute);
-  
+
   var squareVerticesBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
-  
-  
-  
+
+
+
   var vertices = Shape([500,500,500], [0,0,0]);
   //var ent = new Entity(gl, vertices, shaderProgram);
   //ent.pos.x += 100;
-  
+
   //gl.bufferData(gl.ARRAY_BUFFER, math.flatten(vertices).toArray(), gl.STATIC_DRAW);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-  
+
   gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
   gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-  
+
   gl.lineWidth(window.devicePixelRatio || 1);
   */
   $(window).resize();
@@ -185,12 +194,22 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
   var time = window.performance.now();
   var loop = function(t, frame)
   {
-    camera.position.x = (mouse.x-width/2)*0.05;
-    camera.position.y = (mouse.y-height/2)*0.05;
+    var dist = dScroll*0.001;
+    //cube2.position.y = Math.cos(t*0.005)*(5);
+    cube2.position.x = Math.cos(t*0.005)*(5);
+    cube2.position.z = Math.sin(t*0.005)*(5);
+    //cube2.position.y = dist;
+    //camera.position.x = Math.sin((mouse.x-width/2)*0.005)*50;
+    //camera.position.y = Math.sin((mouse.y-height/2)*0.005)*50;
+    camera.position.x = camera.position.y = 0;
+    //camera.position.x = Math.sin(90+(mouse.y-height/2)*0.005)*(10+dist);
+    camera.position.y = Math.cos(90+(mouse.y-height/2)*0.005)*(10+dist);
+    camera.position.x += Math.sin(90+(mouse.x-width/2)*0.005)*(10+dist);
+    camera.position.z = Math.cos(90+(mouse.x-width/2)*0.005)*(10+dist);
     camera.lookAt(new THREE.Vector3(0,0,0));
-    cube.rotation.y = t*0.0005;
-    cube.rotation.x = t*0.0007;
-    cube.rotation.x = t*0.0011;
+    //cube.rotation.y = t*0.0005;
+    //cube.rotation.x = t*0.0007;
+    //cube.rotation.z = t*0.0011;
   };
   var main = function()
   {
