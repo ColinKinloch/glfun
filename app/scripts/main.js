@@ -17,8 +17,8 @@ require.config({
     }
   }
 });
-require([ 'jquery', 'THREE', 'gl-matrix', 'Shape', 'text!shader.glslf', 'text!shader.glslv' ],
-function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertshad           )
+require([ 'jquery', 'THREE', 'gl-matrix', 'Shape', 'text!shader.glslf', 'text!psx.glslv' ],
+function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad           )
 {
   var canvas = $('#main');
   var scene = new THREE.Scene();
@@ -31,41 +31,17 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
   var light = new THREE.AmbientLight( 0x0f0 ); // soft white light
   scene.add( light );
 
-  var light = new THREE.PointLight( 0xff0000, 1, 100 );
-  light.position.set( 25, 50, 50 );
-  scene.add( light );
+  var light2 = new THREE.PointLight( 0xff0000, 1, 1000 );
+  light2.position.set( 25, 50, 50 );
+  scene.add( light2 );
+  var light3 = new THREE.PointLight( 0x00ff00, 1, 1000 );
+  light3.position.set( -25, -50, -50 );
+  scene.add( light3 );
 
   var geometry = new THREE.BoxGeometry( 5, 5, 5 );
   var geometry = new THREE.SphereGeometry( 5, 20, 10 );
   var geometry2 = new THREE.BoxGeometry( 2, 2, 2 );
-
-  /*var Shape = function (s,c)
-  {
-    for(var d in s)
-     s[d] = s[d]/2;
-    var verts = new THREE.Geometry();
-    for(var v=0; v<8; ++v)
-    {
-      var vert = [];
-      var flump='';
-      for(d in s)
-      {
-        if((v>>d) & 1)
-        {
-          vert.push(c[d]+s[d]/2);
-          flump+='1';
-        }
-        else
-        {
-          vert.push(c[d]-s[d]/2);
-          flump+='0';
-        }
-      }
-      //console.log(flump);
-       verts.vertices.push(new THREE.Vector3(vert[0], vert[1], vert[2]));
-    }
-    return verts;
-  };*/
+  
   /*var shape = new THREE.Shape();
   shape.moveTo( 0,0 );
   shape.lineTo( 0, 1 );
@@ -83,13 +59,114 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
     shininess: 30,
     shading: THREE.FlatShading
   } );
+  
+  
   var material = new THREE.ShaderMaterial({
-    fragmentShader: fragshad,
-    vertexShader: vertshad,
+    vertexColors:THREE.VertexColors,
+    color: new THREE.Color(0xff0f00),
+    uniforms: THREE.UniformsUtils.merge([
+			THREE.UniformsLib[ 'common' ],
+			THREE.UniformsLib[ 'lights' ],
+			/*THREE.UniformsLib[ 'fog' ],
+			THREE.UniformsLib[ 'shadowmap' ],*/
+			{
+				'color'  : { type: 'c', value: new THREE.Color( 0xff00aa ) },
+				/*'emissive' : { type: 'c', value: new THREE.Color( 0x0f000f ) },
+				'wrapRGB'  : { type: 'v3', value: new THREE.Vector3( 1, 1, 1 ) }*/
+			}
+
+		]),
+    vertexShader:  [
+      /*psxshad,
+			'#define LAMBERT',
+
+			"varying vec3 vLightFront;",
+
+			"#ifdef DOUBLE_SIDED",
+
+			"	varying vec3 vLightBack;",
+
+			"#endif",*/
+
+			/*THREE.ShaderChunk[ "map_pars_vertex" ],
+			THREE.ShaderChunk[ "lightmap_pars_vertex" ],
+			THREE.ShaderChunk[ "envmap_pars_vertex" ],
+			THREE.ShaderChunk[ "lights_lambert_pars_vertex" ],*/
+			THREE.ShaderChunk[ 'color_pars_vertex' ],
+			/*
+			THREE.ShaderChunk[ "morphtarget_pars_vertex" ],
+			THREE.ShaderChunk[ "skinning_pars_vertex" ],
+			THREE.ShaderChunk[ "shadowmap_pars_vertex" ],
+			THREE.ShaderChunk[ "logdepthbuf_pars_vertex" ],*/
+
+			'void main() {',
+				THREE.ShaderChunk[ 'color_vertex' ],
+				/*
+        'vec4 mvPosition;',
+        '#ifdef USE_SKINNING',
+        ' mvPosition = modelViewMatrix * skinned;',
+        '#endif',
+        '#if !defined( USE_SKINNING ) && defined( USE_MORPHTARGETS )',
+        ' mvPosition = modelViewMatrix * vec4( morphed, 1.0 );',
+        '#endif',
+        '#if !defined( USE_SKINNING ) && ! defined( USE_MORPHTARGETS )',
+        ' mvPosition = modelViewMatrix * vec4( position, 1.0 );',
+        '#endif',
+        'gl_Position = projectionMatrix * vec4(psx(vec3(mvPosition),11.0), 1.0);',*/
+				THREE.ShaderChunk[ 'default_vertex' ],
+				/*THREE.ShaderChunk[ "logdepthbuf_vertex" ],
+
+				THREE.ShaderChunk[ "worldpos_vertex" ],
+				THREE.ShaderChunk[ "envmap_vertex" ],
+				THREE.ShaderChunk[ "lights_lambert_vertex" ],
+				THREE.ShaderChunk[ "shadowmap_vertex" ],*/
+
+			'}'
+
+		].join('\n'),
+		fragmentShader: [
+
+			/*"uniform vec3 diffuse;",
+			"uniform float opacity;",*/
+
+			THREE.ShaderChunk[ "color_pars_fragment" ],
+			/*THREE.ShaderChunk[ "map_pars_fragment" ],
+			THREE.ShaderChunk[ "alphamap_pars_fragment" ],
+			THREE.ShaderChunk[ "lightmap_pars_fragment" ],
+			THREE.ShaderChunk[ "envmap_pars_fragment" ],
+			THREE.ShaderChunk[ "fog_pars_fragment" ],
+			THREE.ShaderChunk[ "shadowmap_pars_fragment" ],
+			THREE.ShaderChunk[ "specularmap_pars_fragment" ],
+			THREE.ShaderChunk[ "logdepthbuf_pars_fragment" ],*/
+
+			"void main() {",
+
+			/*"	gl_FragColor = vec4( diffuse, opacity );",
+
+				THREE.ShaderChunk[ "logdepthbuf_fragment" ],
+				THREE.ShaderChunk[ "map_fragment" ],
+				THREE.ShaderChunk[ "alphamap_fragment" ],
+				THREE.ShaderChunk[ "alphatest_fragment" ],
+				THREE.ShaderChunk[ "specularmap_fragment" ],
+				THREE.ShaderChunk[ "lightmap_fragment" ],*/
+			  'gl_FragColor = vec4(vColor,1.0);',
+				THREE.ShaderChunk[ "color_fragment" ],
+				/*THREE.ShaderChunk[ "envmap_fragment" ],
+				THREE.ShaderChunk[ "shadowmap_fragment" ],
+
+				THREE.ShaderChunk[ "linear_to_gamma_fragment" ],
+
+				THREE.ShaderChunk[ "fog_fragment" ],*/
+			//"	gl_FragColor = vec4( pointLightColor[0], 1.0 );",
+
+			"}"
+
+		].join("\n"),
     wireframe: true,
-    lights: false
-    //fog: true
+    lights: true,
   });
+  //var material = new THREE.ShaderMaterial(THREE.ShaderLib['lambert']);
+  //var material = new THREE.MeshLambertMaterial({wireframe: true});
 
 
 
@@ -117,13 +194,32 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
     height = h;
   };
   $(window).resize(resize);
+  
   var mouse = new THREE.Vector2(0,0);
+  var dm = new THREE.Vector2(0,0);
+  var mold = new THREE.Vector2(0,0);
   var drag = function(e)
   {
-    mouse.x = e.pageX;
-    mouse.y = e.pageY;
+    mouse.set(e.pageX,e.pageY);
+    dm.subVectors(mouse,mold);
+    mold.copy(mouse);
   };
   canvas.mousemove(drag);
+  
+  var but = [];
+  var click = function(e)
+  {
+    if(e.type==='mouseup')
+    {
+      but[e.which] = false;
+    }
+    else if(e.type==='mousedown')
+    {
+      but[e.which] = true;
+    }
+  }
+  canvas.mousedown(click);
+  canvas.mouseup(click);
   var dScroll = 0;
   var scroll = function(e)
   {
@@ -132,84 +228,38 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  vertsha
     e.preventDefault();
   };
   canvas.bind('mousewheel', scroll);
-  /*
-  var glprops = {antialias: false};
-  var gl = canvas[0].getContext('experimental-webgl2', glprops) || canvas[0].getContext('webgl', glprops) || canvas[0].getContext('experimental-webgl', glprops);
-  gl.clearColor(0.0,0.0,0.0,1.0);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-  gl.viewport(0, 0, canvas.width(), canvas.height());
-
-  var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-  var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(fragmentShader, fragshad);
-  gl.shaderSource(vertexShader, vertshad);
-  gl.compileShader(fragmentShader);
-  if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-      console.error("An error occurred compiling the shaders: ", gl.getShaderInfoLog(fragmentShader));
-      return null;
-  }
-  gl.compileShader(vertexShader);
-  if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-      console.error("An error occurred compiling the shaders: ", gl.getShaderInfoLog(vertexShader));
-      return null;
-  }
-
-
-  var shaderProgram = gl.createProgram();
-  gl.attachShader(shaderProgram, fragmentShader);
-  gl.attachShader(shaderProgram, vertexShader);
-  gl.linkProgram(shaderProgram);
-
-  if(!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
-  {
-    console.error('shader program not linked.');
-  }
-
-  gl.useProgram(shaderProgram);
-
-  var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-  gl.enableVertexAttribArray(vertexPositionAttribute);
-
-  var squareVerticesBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
-
-
-
-  var vertices = Shape([500,500,500], [0,0,0]);
-  //var ent = new Entity(gl, vertices, shaderProgram);
-  //ent.pos.x += 100;
-
-  //gl.bufferData(gl.ARRAY_BUFFER, math.flatten(vertices).toArray(), gl.STATIC_DRAW);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
-  gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-
-  gl.lineWidth(window.devicePixelRatio || 1);
-  */
+  
+  var cam = new THREE.Vector2(0,0);
+  var dmold = new THREE.Vector2(0,0);
+  
   $(window).resize();
   var t = window.performance.now();
   var time = window.performance.now();
   var loop = function(t, frame)
   {
     var dist = dScroll*0.001;
+    
+    if(but[1]===true)
+    {
+      dmold.copy(dm)
+    }
+    cam.add(dmold);
     //cube2.position.y = Math.cos(t*0.005)*(5);
     cube2.position.x = Math.cos(t*0.005)*(5);
     cube2.position.z = Math.sin(t*0.005)*(5);
     //cube2.position.y = dist;
     //camera.position.x = Math.sin((mouse.x-width/2)*0.005)*50;
     //camera.position.y = Math.sin((mouse.y-height/2)*0.005)*50;
-    camera.position.x = camera.position.y = 0;
     //camera.position.x = Math.sin(90+(mouse.y-height/2)*0.005)*(10+dist);
-    camera.position.y = Math.cos(90+(mouse.y-height/2)*0.005)*(10+dist);
-    camera.position.x += Math.sin(90+(mouse.x-width/2)*0.005)*(10+dist);
-    camera.position.z = Math.cos(90+(mouse.x-width/2)*0.005)*(10+dist);
+    camera.position.y = (mouse.y-height/2)*0.01;
+    camera.position.x = Math.cos(90+(cam.x-width/2)*0.01)*(10+dist);
+    camera.position.z = Math.sin(90+(cam.x-width/2)*0.01)*(10+dist);
     camera.lookAt(new THREE.Vector3(0,0,0));
     //cube.rotation.y = t*0.0005;
     //cube.rotation.x = t*0.0007;
     //cube.rotation.z = t*0.0011;
+    dmold.multiplyScalar(0.99);
+    dm.set(0,0);
   };
   var main = function()
   {
