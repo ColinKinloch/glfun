@@ -70,14 +70,14 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
 			/*THREE.UniformsLib[ 'fog' ],
 			THREE.UniformsLib[ 'shadowmap' ],*/
 			{
-				'color'  : { type: 'c', value: new THREE.Color( 0xff00aa ) },
-				/*'emissive' : { type: 'c', value: new THREE.Color( 0x0f000f ) },
-				'wrapRGB'  : { type: 'v3', value: new THREE.Vector3( 1, 1, 1 ) }*/
+				'ambient'  : { type: 'c', value: new THREE.Color( 0xff00aa ) },
+				'emissive' : { type: 'c', value: new THREE.Color( 0x0f000f ) },
+				'wrapRGB'  : { type: 'v3', value: new THREE.Vector3( 1, 1, 1 ) }
 			}
 
 		]),
     vertexShader:  [
-      /*psxshad,
+      psxshad,
 			'#define LAMBERT',
 
 			"varying vec3 vLightFront;",
@@ -86,12 +86,11 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
 
 			"	varying vec3 vLightBack;",
 
-			"#endif",*/
-
+			"#endif",
 			/*THREE.ShaderChunk[ "map_pars_vertex" ],
 			THREE.ShaderChunk[ "lightmap_pars_vertex" ],
-			THREE.ShaderChunk[ "envmap_pars_vertex" ],
-			THREE.ShaderChunk[ "lights_lambert_pars_vertex" ],*/
+			THREE.ShaderChunk[ "envmap_pars_vertex" ],*/
+			THREE.ShaderChunk[ 'lights_lambert_pars_vertex' ],
 			THREE.ShaderChunk[ 'color_pars_vertex' ],
 			/*
 			THREE.ShaderChunk[ "morphtarget_pars_vertex" ],
@@ -100,8 +99,9 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
 			THREE.ShaderChunk[ "logdepthbuf_pars_vertex" ],*/
 
 			'void main() {',
+			
 				THREE.ShaderChunk[ 'color_vertex' ],
-				/*
+				
         'vec4 mvPosition;',
         '#ifdef USE_SKINNING',
         ' mvPosition = modelViewMatrix * skinned;',
@@ -112,24 +112,31 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
         '#if !defined( USE_SKINNING ) && ! defined( USE_MORPHTARGETS )',
         ' mvPosition = modelViewMatrix * vec4( position, 1.0 );',
         '#endif',
-        'gl_Position = projectionMatrix * vec4(psx(vec3(mvPosition),11.0), 1.0);',*/
-				THREE.ShaderChunk[ 'default_vertex' ],
+        'gl_Position = projectionMatrix * vec4(psx(vec3(mvPosition),11.0), 1.0);',
+				//THREE.ShaderChunk[ 'default_vertex' ],
+				THREE.ShaderChunk[ 'defaultnormal_vertex' ],
 				/*THREE.ShaderChunk[ "logdepthbuf_vertex" ],
 
 				THREE.ShaderChunk[ "worldpos_vertex" ],
 				THREE.ShaderChunk[ "envmap_vertex" ],
-				THREE.ShaderChunk[ "lights_lambert_vertex" ],
 				THREE.ShaderChunk[ "shadowmap_vertex" ],*/
+				THREE.ShaderChunk[ "lights_lambert_vertex" ],
 
 			'}'
 
 		].join('\n'),
 		fragmentShader: [
-
+    'uniform float opacity;',
 			/*"uniform vec3 diffuse;",
 			"uniform float opacity;",*/
+			'varying vec3 vLightFront;',
+			'#ifdef DOUBLE_SIDED',
+			'	varying vec3 vLightBack;',
+			'#endif',
 
-			THREE.ShaderChunk[ "color_pars_fragment" ],
+			THREE.ShaderChunk[ 'lights_lambert_pars_vertex' ],
+      'uniform vec3 uColor;',
+			THREE.ShaderChunk[ 'color_pars_fragment' ],
 			/*THREE.ShaderChunk[ "map_pars_fragment" ],
 			THREE.ShaderChunk[ "alphamap_pars_fragment" ],
 			THREE.ShaderChunk[ "lightmap_pars_fragment" ],
@@ -139,8 +146,8 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
 			THREE.ShaderChunk[ "specularmap_pars_fragment" ],
 			THREE.ShaderChunk[ "logdepthbuf_pars_fragment" ],*/
 
-			"void main() {",
-
+			'void main() {',
+        'gl_FragColor = vec4( vec3( 1.0 ), opacity );',
 			/*"	gl_FragColor = vec4( diffuse, opacity );",
 
 				THREE.ShaderChunk[ "logdepthbuf_fragment" ],
@@ -149,15 +156,22 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
 				THREE.ShaderChunk[ "alphatest_fragment" ],
 				THREE.ShaderChunk[ "specularmap_fragment" ],
 				THREE.ShaderChunk[ "lightmap_fragment" ],*/
-			  'gl_FragColor = vec4(vColor,1.0);',
 				THREE.ShaderChunk[ "color_fragment" ],
+				'#ifdef DOUBLE_SIDED',
+				'  if(gl_frontFacing)',
+				'gl_FragColor.xyz *= vLightFront',
+				'else',
+				'gl_FragColor.xyz *= vLightBack',
+				'#else',
+			  'gl_FragColor.xyz *= vLightFront;',
+			  '#endif',
 				/*THREE.ShaderChunk[ "envmap_fragment" ],
 				THREE.ShaderChunk[ "shadowmap_fragment" ],
 
 				THREE.ShaderChunk[ "linear_to_gamma_fragment" ],
 
 				THREE.ShaderChunk[ "fog_fragment" ],*/
-			//"	gl_FragColor = vec4( pointLightColor[0], 1.0 );",
+			//'	gl_FragColor = gl_FragColor * vec4( pointLightColor, 1.0 );',
 
 			"}"
 
