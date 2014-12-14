@@ -7,7 +7,8 @@
     "jquery": "~1.11.0",
     "requirejs": "~2.1.15",
     "gl-matrix": "~2.2.1",
-    "threejs": "*"
+    "threejs": "*",
+    "stats.js": "*"
   },
   "devDependencies": {}
 }

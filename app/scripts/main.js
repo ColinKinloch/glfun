@@ -8,25 +8,98 @@ require.config({
     'jquery': '../bower_components/jquery/dist/jquery',
     'bootstrap': '../bower_components/bootstrap-sass-official/vendor/assets/javascripts/bootstrap',
     'text': '../bower_components/requirejs-text/text',
-    'THREE': '../bower_components/threejs/build/three'
+    'THREE': '../bower_components/threejs/build/three',
+    'gltf': '../lib/gltf',
+    'post': '../lib/postprocessing',
+    'stats': '../bower_components/stats.js/build/stats.min',
+    'OrbitControls': '../lib/OrbitControls'
   },
   shim: {
     bootstrap: ['jquery'],
     THREE: {
       exports: 'THREE'
+    },
+    'gltf/': {
+      exports: 'THREE'
+    },
+    'gltf/glTFLoader': {
+      exports: 'THREE',
+      deps: [
+        'THREE',
+        'gltf/glTF-parser',
+        'gltf/glTFLoaderUtils',
+        'gltf/glTFAnimation'
+      ]
+    },
+    'post/CopyShader': {
+      exports: 'THREE',
+      deps: [
+        'THREE'
+      ]
+    },
+    'post/RenderPass': {
+      exports: 'THREE',
+      deps: [
+        'THREE'
+      ]
+    },
+    'post/ShaderPass': {
+      exports: 'THREE',
+      deps: [
+        'THREE'
+      ]
+    },
+    'post/MaskPass': {
+      exports: 'THREE',
+      deps: [
+        'THREE'
+      ]
+    },
+    'post/EffectComposer': {
+      exports: 'THREE',
+      deps: [
+        'THREE',
+        'post/CopyShader',
+        'post/ShaderPass',
+        'post/MaskPass'
+      ]
+    },
+    stats: {
+      exports: 'Stats'
+    },
+    OrbitControls: {
+      exports: 'THREE'
     }
   }
 });
-require([ 'jquery', 'THREE', 'gl-matrix', 'Shape', 'text!shader.glslf', 'text!psx.glslv' ],
-function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad           )
+require([ 'jquery', 'stats', 'Shaders/one', 'Shaders/screen', 'THREE', 'post/CopyShader', 'post/EffectComposer', 'post/RenderPass', 'post/ShaderPass', 'OrbitControls', 'gltf/glTFLoader' ],
+function(  $      ,  Stats ,  shadone     ,  shadscreen     ,  THREE )
 {
+  var renderStat = new Stats();
+  document.body.appendChild( renderStat.domElement );
+  
+  var loopStat = new Stats();
+  document.body.appendChild( loopStat.domElement );
+  
   var canvas = $('#main');
   var scene = new THREE.Scene();
-
+  
+  
   var renderer = new THREE.WebGLRenderer({canvas:canvas[0], antialias: false});
   //renderer.setSize( window.innerWidth, window.innerHeight );
   //document.body.appendChild( renderer.domElement );
   var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+  
+  var composer = new THREE.EffectComposer(renderer);
+  composer.addPass(new THREE.RenderPass(scene, camera));
+  var screenShader = new THREE.ShaderPass(shadscreen);
+  screenShader.renderToScreen = true;
+  composer.addPass(screenShader);
+  
+  
+  var control = new THREE.OrbitControls(camera, canvas[0]);
+  //console.log(THREE.OrbitControls)
+  //controls.target.z = 0;
 
   var light = new THREE.AmbientLight( 0x0f0 ); // soft white light
   scene.add( light );
@@ -41,6 +114,11 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
   var geometry = new THREE.BoxGeometry( 5, 5, 5 );
   var geometry = new THREE.SphereGeometry( 5, 20, 10 );
   var geometry2 = new THREE.BoxGeometry( 2, 2, 2 );
+  
+  var loader = new THREE.glTFLoader();
+  var buddah = loader.load('./res/duck.gltf', function(data){
+    
+  });
   
   /*var shape = new THREE.Shape();
   shape.moveTo( 0,0 );
@@ -60,125 +138,7 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
     shading: THREE.FlatShading
   } );
   
-  
-  var material = new THREE.ShaderMaterial({
-    vertexColors:THREE.VertexColors,
-    color: new THREE.Color(0xff0f00),
-    uniforms: THREE.UniformsUtils.merge([
-			THREE.UniformsLib[ 'common' ],
-			THREE.UniformsLib[ 'lights' ],
-			/*THREE.UniformsLib[ 'fog' ],
-			THREE.UniformsLib[ 'shadowmap' ],*/
-			{
-				'ambient'  : { type: 'c', value: new THREE.Color( 0xff00aa ) },
-				'emissive' : { type: 'c', value: new THREE.Color( 0x0f000f ) },
-				'wrapRGB'  : { type: 'v3', value: new THREE.Vector3( 1, 1, 1 ) }
-			}
-
-		]),
-    vertexShader:  [
-      psxshad,
-			'#define LAMBERT',
-
-			"varying vec3 vLightFront;",
-
-			"#ifdef DOUBLE_SIDED",
-
-			"	varying vec3 vLightBack;",
-
-			"#endif",
-			/*THREE.ShaderChunk[ "map_pars_vertex" ],
-			THREE.ShaderChunk[ "lightmap_pars_vertex" ],
-			THREE.ShaderChunk[ "envmap_pars_vertex" ],*/
-			THREE.ShaderChunk[ 'lights_lambert_pars_vertex' ],
-			THREE.ShaderChunk[ 'color_pars_vertex' ],
-			/*
-			THREE.ShaderChunk[ "morphtarget_pars_vertex" ],
-			THREE.ShaderChunk[ "skinning_pars_vertex" ],
-			THREE.ShaderChunk[ "shadowmap_pars_vertex" ],
-			THREE.ShaderChunk[ "logdepthbuf_pars_vertex" ],*/
-
-			'void main() {',
-			
-				THREE.ShaderChunk[ 'color_vertex' ],
-				
-        'vec4 mvPosition;',
-        '#ifdef USE_SKINNING',
-        ' mvPosition = modelViewMatrix * skinned;',
-        '#endif',
-        '#if !defined( USE_SKINNING ) && defined( USE_MORPHTARGETS )',
-        ' mvPosition = modelViewMatrix * vec4( morphed, 1.0 );',
-        '#endif',
-        '#if !defined( USE_SKINNING ) && ! defined( USE_MORPHTARGETS )',
-        ' mvPosition = modelViewMatrix * vec4( position, 1.0 );',
-        '#endif',
-        'gl_Position = projectionMatrix * vec4(psx(vec3(mvPosition),11.0), 1.0);',
-				//THREE.ShaderChunk[ 'default_vertex' ],
-				THREE.ShaderChunk[ 'defaultnormal_vertex' ],
-				/*THREE.ShaderChunk[ "logdepthbuf_vertex" ],
-
-				THREE.ShaderChunk[ "worldpos_vertex" ],
-				THREE.ShaderChunk[ "envmap_vertex" ],
-				THREE.ShaderChunk[ "shadowmap_vertex" ],*/
-				THREE.ShaderChunk[ "lights_lambert_vertex" ],
-
-			'}'
-
-		].join('\n'),
-		fragmentShader: [
-    'uniform float opacity;',
-			/*"uniform vec3 diffuse;",
-			"uniform float opacity;",*/
-			'varying vec3 vLightFront;',
-			'#ifdef DOUBLE_SIDED',
-			'	varying vec3 vLightBack;',
-			'#endif',
-
-			THREE.ShaderChunk[ 'lights_lambert_pars_vertex' ],
-      'uniform vec3 uColor;',
-			THREE.ShaderChunk[ 'color_pars_fragment' ],
-			/*THREE.ShaderChunk[ "map_pars_fragment" ],
-			THREE.ShaderChunk[ "alphamap_pars_fragment" ],
-			THREE.ShaderChunk[ "lightmap_pars_fragment" ],
-			THREE.ShaderChunk[ "envmap_pars_fragment" ],
-			THREE.ShaderChunk[ "fog_pars_fragment" ],
-			THREE.ShaderChunk[ "shadowmap_pars_fragment" ],
-			THREE.ShaderChunk[ "specularmap_pars_fragment" ],
-			THREE.ShaderChunk[ "logdepthbuf_pars_fragment" ],*/
-
-			'void main() {',
-        'gl_FragColor = vec4( vec3( 1.0 ), opacity );',
-			/*"	gl_FragColor = vec4( diffuse, opacity );",
-
-				THREE.ShaderChunk[ "logdepthbuf_fragment" ],
-				THREE.ShaderChunk[ "map_fragment" ],
-				THREE.ShaderChunk[ "alphamap_fragment" ],
-				THREE.ShaderChunk[ "alphatest_fragment" ],
-				THREE.ShaderChunk[ "specularmap_fragment" ],
-				THREE.ShaderChunk[ "lightmap_fragment" ],*/
-				THREE.ShaderChunk[ "color_fragment" ],
-				'#ifdef DOUBLE_SIDED',
-				'  if(gl_frontFacing)',
-				'gl_FragColor.xyz *= vLightFront',
-				'else',
-				'gl_FragColor.xyz *= vLightBack',
-				'#else',
-			  'gl_FragColor.xyz *= vLightFront;',
-			  '#endif',
-				/*THREE.ShaderChunk[ "envmap_fragment" ],
-				THREE.ShaderChunk[ "shadowmap_fragment" ],
-
-				THREE.ShaderChunk[ "linear_to_gamma_fragment" ],
-
-				THREE.ShaderChunk[ "fog_fragment" ],*/
-			//'	gl_FragColor = gl_FragColor * vec4( pointLightColor, 1.0 );',
-
-			"}"
-
-		].join("\n"),
-    wireframe: true,
-    lights: true,
-  });
+  var material = new THREE.ShaderMaterial(shadone);
   //var material = new THREE.ShaderMaterial(THREE.ShaderLib['lambert']);
   //var material = new THREE.MeshLambertMaterial({wireframe: true});
 
@@ -204,14 +164,16 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
     renderer.setSize( w, h );
     camera.aspect = r;
     camera.updateProjectionMatrix();
+    composer.setSize(w,h);
     width = w;
     height = h;
   };
   $(window).resize(resize);
   
   var mouse = new THREE.Vector2(0,0);
-  var dm = new THREE.Vector2(0,0);
   var mold = new THREE.Vector2(0,0);
+  var dm = new THREE.Vector2(0,0);
+  var dmold = new THREE.Vector2(0,0);
   var drag = function(e)
   {
     mouse.set(e.pageX,e.pageY);
@@ -251,6 +213,7 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
   var time = window.performance.now();
   var loop = function(t, frame)
   {
+    loopStat.begin();
     var dist = dScroll*0.001;
     
     if(but[1]===true)
@@ -265,15 +228,16 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
     //camera.position.x = Math.sin((mouse.x-width/2)*0.005)*50;
     //camera.position.y = Math.sin((mouse.y-height/2)*0.005)*50;
     //camera.position.x = Math.sin(90+(mouse.y-height/2)*0.005)*(10+dist);
-    camera.position.y = (mouse.y-height/2)*0.01;
-    camera.position.x = Math.cos(90+(cam.x-width/2)*0.01)*(10+dist);
-    camera.position.z = Math.sin(90+(cam.x-width/2)*0.01)*(10+dist);
-    camera.lookAt(new THREE.Vector3(0,0,0));
+    //camera.position.y = (mouse.y-height/2)*0.01;
+    //camera.position.x = Math.cos(90+(cam.x-width/2)*0.01)*(10+dist);
+    //camera.position.z = Math.sin(90+(cam.x-width/2)*0.01)*(10+dist);
+    //camera.lookAt(new THREE.Vector3(0,0,0));
     //cube.rotation.y = t*0.0005;
     //cube.rotation.x = t*0.0007;
     //cube.rotation.z = t*0.0011;
     dmold.multiplyScalar(0.99);
     dm.set(0,0);
+    loopStat.end();
   };
   var main = function()
   {
@@ -285,8 +249,11 @@ function(  $      ,  THREE ,  glm       ,  Shape ,  fragshad          ,  psxshad
   };
   var draw = function()
   {
+    renderStat.begin();
+    
+    composer.render(scene, camera);
+    renderStat.end();
     window.requestAnimationFrame(draw);
-    renderer.render(scene, camera);
   };
   draw();
   setInterval(main, 0);
